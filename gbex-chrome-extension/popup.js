@@ -179,11 +179,12 @@ document.addEventListener("DOMContentLoaded", () => {
             args: [db],
             func: (updatedDb) => {
               localStorage.setItem("gbex-logistics-db", JSON.stringify(updatedDb));
-              if (typeof window.db !== 'undefined') {
-                window.db = updatedDb;
-                // Calls dashboard saveDb() which pushes to Sheets using dashboard tab's iframe bypass
-                window.saveDb();
-                window.render();
+              if (typeof window.updateDb === 'function') {
+                window.updateDb(updatedDb);
+              } else {
+                if (typeof window.db !== 'undefined') window.db = updatedDb;
+                if (typeof window.saveDb === 'function') window.saveDb();
+                if (typeof window.render === 'function') window.render();
               }
               return true;
             }

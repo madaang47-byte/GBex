@@ -1132,6 +1132,16 @@ window.syncNow = syncNow;
 window.authMode = authMode;
 window.closeSocialAuthModal = closeSocialAuthModal;
 window.submitSocialAuth = submitSocialAuth;
+window.saveDb = saveDb;
+window.db = db;
+
+function updateDb(newDb) {
+  db = newDb;
+  window.db = newDb;
+  saveDb();
+  render();
+}
+window.updateDb = updateDb;
 
 async function initApp() {
   renderLoading();
