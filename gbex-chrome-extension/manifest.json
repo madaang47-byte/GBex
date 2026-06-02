@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "GBEX Ekart Jobsheet Sync",
+  "version": "1.0",
+  "description": "Scrapes and syncs active jobsheet data from Ekart Logistics to your GBEX Google Sheet dashboard.",
+  "permissions": ["activeTab", "scripting", "tabs"],
+  "host_permissions": [
+    "https://partner.ekartlogistics.com/*",
+    "https://script.google.com/*",
+    "https://script.googleusercontent.com/*",
+    "*://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://partner.ekartlogistics.com/pcm/track/jobsheet/active*",
+        "https://partner.ekartlogistics.com/pcm/view-runsheet/*",
+        "http://localhost:8085/mock-ekart.html*",
+        "http://127.0.0.1:8085/mock-ekart.html*"
+      ],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

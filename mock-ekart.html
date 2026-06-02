@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobsheets - Ekart Partner Portal (Mock)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f5f5f5;
+    }
+    .header {
+      background-color: #007bff;
+      color: white;
+      padding: 15px 30px;
+      font-size: 20px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .container {
+      padding: 30px;
+    }
+    .card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f8f9fa;
+      color: #555;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      color: white;
+    }
+    .badge.pending {
+      background-color: #ffc107;
+      color: #333;
+    }
+    .badge.progress {
+      background-color: #28a745;
+    }
+    .pill {
+      display: inline-block;
+      background-color: #007bff;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .btn {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn.disabled {
+      background-color: #e9ecef;
+      color: #6c757d;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span>ekart LOGISTICS</span>
+    <span style="font-size: 14px;">Demo Partner Portal</span>
+  </div>
+  
+  <div class="container">
+    <div class="card">
+      <h2>Jobsheets (Active)</h2>
+      <p style="color: #666; font-size: 14px;">Chrome Extension open karke "Sync Active Jobsheets" par click karein taaki ye rows aapke live Google Sheet dashboard par sync ho jayein.</p>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>S. No.</th>
+            <th>Status</th>
+            <th>PCE ID</th>
+            <th>Sheet ID</th>
+            <th>Type</th>
+            <th>Contact</th>
+            <th>Last Edited</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><span class="badge pending">Reco Pending</span></td>
+            <td>Jatin Jatin</td>
+            <td>861208034</td>
+            <td><span class="pill">RUNSHEET</span></td>
+            <td>9992259068</td>
+            <td>1 Jun 2026, 3:48 pm</td>
+            <td><button class="btn">Start Reco</button></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><span class="badge progress">In Progress</span></td>
+            <td>Jatin Jatin</td>
+            <td>861243730</td>
+            <td><span class="pill">RUNSHEET</span></td>
+            <td>9992259068</td>
+            <td>1 Jun 2026, 12:47 pm</td>
+            <td><button class="btn disabled" disabled>Start Reco</button></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><span class="badge progress">In Progress</span></td>
+            <td>Sachin Sachin</td>
+            <td>861235252</td>
+            <td><span class="pill">RUNSHEET</span></td>
+            <td>9034189006</td>
+            <td>1 Jun 2026, 1:26 pm</td>
+            <td><button class="btn disabled" disabled>Start Reco</button></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><span class="badge progress">In Progress</span></td>
+            <td>Om Parkash</td>
+            <td>861213886</td>
+            <td><span class="pill">RUNSHEET</span></td>
+            <td>9034270582</td>
+            <td>1 Jun 2026, 3:50 pm</td>
+            <td><button class="btn disabled" disabled>Start Reco</button></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><span class="badge progress">In Progress</span></td>
+            <td>Vijay Kumar</td>
+            <td>861199551</td>
+            <td><span class="pill">RUNSHEET</span></td>
+            <td>8950397665</td>
+            <td>1 Jun 2026, 10:22 am</td>
+            <td><button class="btn disabled" disabled>Start Reco</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
