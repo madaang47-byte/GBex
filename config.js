@@ -1,3 +1,3 @@
 window.GMK_CONFIG = {
-  googleSheetApiUrl: "https://script.google.com/macros/s/AKfycbxELx52rTQm_V1azL2lEyK4yrsgBKwsw-P0Um1ThN4207FRIXKSl8KnkISHEyjagvao/exec",
+  googleSheetApiUrl: "https://script.google.com/macros/s/AKfycbyJ8GOxtkVMDoDY6Mx3t6H-89yJltE7uNLipILnL5XKCLtK0YcJ3u9YYtO9TW3-1j2y/exec",
 };
