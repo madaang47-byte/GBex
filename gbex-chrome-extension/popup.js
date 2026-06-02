@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (!activeTab.url || (!activeTab.url.includes("partner.ekartlogistics.com") && !activeTab.url.includes("localhost:8085"))) {
-        showStatus("Kripya active jobsheet page par jayein.", "error");
+        showStatus("Please go to the active jobsheet page.", "error");
         syncBtn.disabled = false;
         return;
       }
@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (!dashboardTab) {
-        showStatus("Error: GBEX Dashboard tab (http://localhost:8085/) open hona zaroori hai. Use open rakhein aur try karein.", "error");
+        showStatus("Error: GBEX Dashboard tab must be open. Please keep it open and try again.", "error");
         syncBtn.disabled = false;
         return;
       }
@@ -51,20 +51,20 @@ document.addEventListener("DOMContentLoaded", () => {
       // 3. Send message to content script to get scraped table
       chrome.tabs.sendMessage(activeTab.id, { action: "scrapeData" }, async (scrapeRes) => {
         if (chrome.runtime.lastError) {
-          showStatus("Error: Tab communication failed. Kripya page refresh karein.", "error");
+          showStatus("Error: Tab communication failed. Please refresh the page.", "error");
           syncBtn.disabled = false;
           return;
         }
 
         if (!scrapeRes || !scrapeRes.success) {
-          showStatus(scrapeRes?.error || "Page data read nahi ho saka.", "error");
+          showStatus(scrapeRes?.error || "Failed to read page data.", "error");
           syncBtn.disabled = false;
           return;
         }
 
         const scrapedRecords = scrapeRes.data;
         if (!scrapedRecords || scrapedRecords.length === 0) {
-          showStatus("Page par koi active jobsheet row nahi mila.", "error");
+          showStatus("No active jobsheet rows found on the page.", "error");
           syncBtn.disabled = false;
           return;
         }

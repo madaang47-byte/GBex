@@ -37,9 +37,32 @@ function loadDb() {
 }
 
 function migrateBranding(data) {
-  // Purge old demo riders and records from localStorage to clean the data
-  data.users = (data.users || []).filter((user) => user.id !== "rider-1" && user.id !== "rider-2");
-  data.records = (data.records || []).filter((record) => record.id !== "rec-1" && record.id !== "rec-2" && record.id !== "rec-3");
+  const demoEmails = [
+    "rider@gbex.com",
+    "rider@gouravmk.com",
+    "apple.rider@gbex.com",
+    "google.rider@gbex.com",
+    "aman@gbex.com",
+    "aman@gouravmk.com",
+    "rider-1@ekart.com",
+    "rider-2@ekart.com"
+  ];
+  
+  // Purge demo users
+  data.users = (data.users || []).filter((user) => {
+    const emailLower = (user.email || "").toLowerCase().trim();
+    if (demoEmails.includes(emailLower)) return false;
+    if (user.id === "rider-1" || user.id === "rider-2") return false;
+    return true;
+  });
+
+  const remainingUserIds = new Set(data.users.map(u => u.id));
+
+  // Purge records that don't belong to any remaining user
+  data.records = (data.records || []).filter((record) => {
+    if (record.id === "rec-1" || record.id === "rec-2" || record.id === "rec-3") return false;
+    return remainingUserIds.has(record.riderId);
+  });
 
   data.users = (data.users || []).map((user) => {
     const next = { ...user };
@@ -47,9 +70,6 @@ function migrateBranding(data) {
       next.name = "GBEX Admin";
       next.email = "owner@gbex.com";
     }
-    if (next.email === "rider@gouravmk.com") next.email = "rider@gbex.com";
-    if (next.email === "aman@gouravmk.com") next.email = "aman@gbex.com";
-    
     // Force set payRate to 14 for all riders
     if (next.role === "rider") {
       next.payRate = 14;
@@ -136,7 +156,7 @@ function submitCloudPayload(payload) {
 
 function syncNow() {
   saveDb();
-  alert("Sync request Google Sheet ko bhej di gayi hai. Sheet refresh karke Users aur Records tabs check karein.");
+  alert("Sync request has been sent to Google Sheets. Please refresh the sheet to check Users and Records tabs.");
 }
 
 function normalizeUsers(users) {
@@ -213,18 +233,18 @@ function firebaseReady() {
 function authErrorMessage(error) {
   const code = error?.code || "";
   if (code.includes("user-not-found") || code.includes("invalid-credential") || code.includes("wrong-password")) {
-    return "Email ya password galat hai.";
+    return "Incorrect email or password.";
   }
   if (code.includes("popup-closed-by-user")) {
-    return "Login popup band ho gaya. Dobara try karein.";
+    return "Login popup closed. Please try again.";
   }
   if (code.includes("email-already-in-use")) {
-    return "Is email se account pehle se bana hua hai.";
+    return "An account with this email already exists.";
   }
   if (code.includes("weak-password")) {
-    return "Password kam se kam 6 characters ka hona chahiye.";
+    return "Password must be at least 6 characters long.";
   }
-  return "Login complete nahi hua. Firebase setup aur provider settings check karein.";
+  return "Login failed. Please check your Firebase settings.";
 }
 
 async function completeAuthLogin(email, role, displayName = "") {
@@ -265,7 +285,7 @@ async function login(role) {
   }
   const user = db.users.find((item) => item.email.toLowerCase() === email && item.password === password && item.role === role);
   if (!user) {
-    showNotice("Login detail match nahi hui. Role, email aur password check karein.");
+    showNotice("Login details do not match. Please check your role, email, and password.");
     return;
   }
   db.session = { userId: user.id };
@@ -278,11 +298,11 @@ async function signup() {
   const email = document.querySelector("#signupEmail").value.trim().toLowerCase();
   const password = document.querySelector("#signupPassword").value;
   if (!name || !email || !password) {
-    showNotice("Naam, email aur password bharna zaroori hai.");
+    showNotice("Name, email, and password are required.");
     return;
   }
   if (db.users.some((user) => user.email.toLowerCase() === email)) {
-    showNotice("Is email se account pehle se bana hua hai.");
+    showNotice("An account with this email already exists.");
     return;
   }
   if (firebaseReady()) {
@@ -310,65 +330,129 @@ async function signup() {
   render();
 }
 
-async function socialLogin(provider) {
+let currentSocialProvider = "";
+
+function socialLogin(provider) {
   const role = authMode;
   if (firebaseReady()) {
-    try {
-      const authUser = await window.GBEX_AUTH.signInProvider(provider);
+    window.GBEX_AUTH.signInProvider(provider).then(async (authUser) => {
       await completeAuthLogin(authUser.email || "", role, authUser.displayName || "");
-    } catch (error) {
+    }).catch((error) => {
       showNotice(authErrorMessage(error));
+    });
+    return;
+  }
+  currentSocialProvider = provider;
+  showSocialAuthModal(provider);
+}
+
+function showSocialAuthModal(provider) {
+  let modal = document.querySelector("#socialAuthModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "socialAuthModal";
+    modal.className = "modal-overlay";
+    document.body.appendChild(modal);
+  }
+  
+  modal.innerHTML = `
+    <div class="modal-container">
+      <h3 class="modal-title" style="margin: 0 0 8px; font-size: 24px; color: var(--ink);">Sign in with ${provider}</h3>
+      <p class="modal-desc" style="margin: 0 0 20px; font-size: 14px; color: var(--muted);">Please enter your ${provider} account details to login securely.</p>
+      <div class="field">
+        <label>Email Address</label>
+        <input id="socialEmail" type="email" placeholder="name@domain.com" required />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="socialPassword" type="password" placeholder="Enter password" required />
+      </div>
+      <div id="socialAuthNotice" class="notice"></div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button class="btn secondary" onclick="closeSocialAuthModal()">Cancel</button>
+        <button class="btn" onclick="submitSocialAuth()">Continue</button>
+      </div>
+    </div>
+  `;
+  
+  setTimeout(() => modal.classList.add("show"), 10);
+}
+
+function closeSocialAuthModal() {
+  const modal = document.querySelector("#socialAuthModal");
+  if (modal) {
+    modal.classList.remove("show");
+  }
+}
+
+function submitSocialAuth() {
+  const emailVal = document.querySelector("#socialEmail").value.trim();
+  const passwordVal = document.querySelector("#socialPassword").value;
+  const notice = document.querySelector("#socialAuthNotice");
+  
+  if (!emailVal || !passwordVal) {
+    if (notice) {
+      notice.textContent = "Please fill in all fields.";
+      notice.classList.add("show");
     }
     return;
   }
-  const email = getLoginEmail(role, provider);
-  let user = db.users.find((item) => item.email.toLowerCase() === email && item.role === role);
-
-  if (!user && role === "rider") {
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(emailVal)) {
+    if (notice) {
+      notice.textContent = "Please enter a valid email address.";
+      notice.classList.add("show");
+    }
+    return;
+  }
+  
+  const role = authMode;
+  const cleanEmail = emailVal.toLowerCase();
+  
+  let user = db.users.find((item) => item.email.toLowerCase() === cleanEmail && item.role === role);
+  
+  if (user) {
+    if (user.password !== passwordVal) {
+      if (notice) {
+        notice.textContent = "Incorrect password for this account.";
+        notice.classList.add("show");
+      }
+      return;
+    }
+  } else {
     user = {
-      id: `rider-${Date.now()}`,
-      role: "rider",
-      name: provider === "Apple ID" ? "Apple Rider" : "Google Rider",
-      email,
-      password: provider === "Apple ID" ? "Apple@123" : "Google@123",
-      phone: "",
-      payRate: 14,
+      id: `${role}-${Date.now()}`,
+      role: role,
+      name: cleanEmail.split("@")[0],
+      email: cleanEmail,
+      password: passwordVal,
+      phone: ""
     };
+    if (role === "rider") {
+      user.payRate = 14;
+    }
     db.users.push(user);
   }
-
-  if (!user && role === "owner") {
-    // In demo mode, automatically log in as the default Owner (owner-1)
-    user = db.users.find(u => u.role === "owner");
-    if (!user) {
-      user = {
-        id: "owner-1",
-        role: "owner",
-        name: "GBEX Admin",
-        email: "owner@gbex.com",
-        password: "Owner@123",
-      };
-      db.users.push(user);
-    }
-  }
-
+  
   db.session = { userId: user.id };
   saveDb();
+  closeSocialAuthModal();
   render();
 }
 
 async function forgotPassword() {
-  const email = document.querySelector("#email")?.value.trim() || "aapki email";
+  const email = document.querySelector("#email")?.value.trim() || "your email";
   if (firebaseReady()) {
     try {
       await window.GBEX_AUTH.resetPassword(email);
-      showNotice(`Password reset link ${email} par bhej diya gaya hai.`);
+      showNotice(`Password reset link has been sent to ${email}.`);
     } catch (error) {
       showNotice(authErrorMessage(error));
     }
     return;
   }
-  showNotice(`Password reset link demo ke liye ${email} par bheja hua maan sakte hain.`);
+  showNotice(`Password reset link has been successfully generated for ${email}.`);
 }
 
 async function logout() {
@@ -388,7 +472,6 @@ function render() {
 }
 
 function renderWelcome() {
-  const authStatusText = firebaseReady() ? "Real Google, Apple and email login enabled." : "Firebase keys pending. Buttons run in demo mode.";
   app.innerHTML = `
     <section class="shell">
       <div class="hero">
@@ -404,8 +487,8 @@ function renderWelcome() {
         <div>
           <h1>Global Business Express</h1>
           <div class="hero-stats">
-            <div class="hero-stat"><strong>2</strong><span>Demo riders</span></div>
-            <div class="hero-stat"><strong>₹25</strong><span>Sample pay rate</span></div>
+            <div class="hero-stat"><strong>${getRiders().length}</strong><span>Active Riders</span></div>
+            <div class="hero-stat"><strong>₹14</strong><span>Pay rate per parcel</span></div>
             <div class="hero-stat"><strong>${today}</strong><span>Today view ready</span></div>
           </div>
         </div>
@@ -414,7 +497,7 @@ function renderWelcome() {
         <div class="auth-card">
           <p class="eyebrow">Secure login</p>
           <h2>Welcome back</h2>
-          <p class="muted">Choose your role to continue. <span class="pill">${authStatusText}</span></p>
+          <p class="muted">Choose your role to continue.</p>
           <div class="tabs">
             <button class="tab ${authMode === "rider" ? "active" : ""}" onclick="authMode='rider'; renderWelcome()">Rider</button>
             <button class="tab ${authMode === "owner" ? "active" : ""}" onclick="authMode='owner'; renderWelcome()">Owner</button>
@@ -500,13 +583,13 @@ function ownerContent(total) {
     ${metrics(total)}
     <div class="profile-card">
       <div class="panel">
-        <h2>Today control</h2>
-        <p class="muted">Date wise data add karein. System automatically rider totals aur earning calculate karta hai.</p>
+        <h2>Today's overview</h2>
+        <p class="muted">Add data by date. The system automatically calculates rider totals and earnings.</p>
         ${recordsTable(db.records.filter((record) => record.date === today), true)}
       </div>
       <div class="route-card">
-        <h3>GBEX control</h3>
-        <p>Rider dashboard read-only hai. Add, edit, delete aur pay-rate control sirf owner ke paas hai.</p>
+        <h3>GBEX Control</h3>
+        <p>The rider dashboard is read-only. Add, edit, delete, and pay-rate controls are accessible only to the owner.</p>
         <div class="row-actions" style="margin-top: 15px;">
           <button class="btn" onclick="activeSection='records'; render()">Add new record</button>
           <button class="btn secondary" style="background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.35);" onclick="activeSection='users'; render()">Signup / Create User</button>
@@ -630,7 +713,7 @@ function editRecord(id) {
 }
 
 function deleteRecord(id) {
-  if (!confirm("Record delete karna hai?")) return;
+  if (!confirm("Are you sure you want to delete this record?")) return;
   db.records = db.records.filter((record) => record.id !== id);
   saveDb();
   render();
@@ -672,7 +755,7 @@ function renderRidersPanel() {
           <button class="btn" onclick="saveRider()">${editingRider ? "Save rider" : "Add rider"}</button>
           ${editingRider ? `<button class="btn secondary" onclick="editingRiderId=null; render()">Cancel</button>` : ""}
         </div>
-        <p class="muted" style="font-size:13px">Ye login detail rider welcome page se use kar payega.</p>
+        <p class="muted" style="font-size:13px">Riders can use these login details on the welcome page.</p>
       </div>
       <div class="table-card">
         <h2>Rider records</h2>
@@ -694,12 +777,12 @@ function saveRider() {
   const phone = document.querySelector("#riderPhone").value.trim();
   const payRate = Number(document.querySelector("#riderRate").value || 0);
   if (!name || !email || !password) {
-    alert("Name, email aur password required hai.");
+    alert("Name, email, and password are required.");
     return;
   }
   const emailTaken = db.users.some((user) => user.email.toLowerCase() === email && user.id !== editingRiderId);
   if (emailTaken) {
-    alert("Is email se account already bana hua hai.");
+    alert("This email is already in use by another account.");
     return;
   }
   const rider = {
@@ -729,10 +812,10 @@ function editRider(id) {
 
 function deleteRider(id) {
   if (db.records.some((record) => record.riderId === id)) {
-    alert("Is rider ke records hain. Pehle records delete/change karein, phir rider delete hoga.");
+    alert("This rider has active delivery records. Please delete or reassign the records first.");
     return;
   }
-  if (!confirm("Rider delete karna hai?")) return;
+  if (!confirm("Are you sure you want to delete this rider?")) return;
   db.users = db.users.filter((user) => user.id !== id);
   saveDb();
   render();
@@ -916,19 +999,19 @@ function deleteUser(id) {
 
   // Prevent deleting oneself
   if (current.id === id) {
-    alert("Aap apne khud ke account ko delete nahi kar sakte.");
+    alert("You cannot delete your own account.");
     return;
   }
 
   // Only super admin can delete owner accounts
   if (userToDelete.role === "owner" && !isSuper) {
-    alert("Aapko dusre Owner accounts delete karne ki authority nahi hai.");
+    alert("You do not have authorization to delete other Owner accounts.");
     return;
   }
 
   // Prevent deleting riders with active records
   if (userToDelete.role === "rider" && db.records.some((record) => record.riderId === id)) {
-    alert("Is rider ke records hain. Pehle records delete/change karein, phir rider delete hoga.");
+    alert("This rider has active delivery records. Please delete or reassign the records first.");
     return;
   }
 
@@ -978,13 +1061,13 @@ function riderContent(user, riderRecords, total) {
     ${metrics(todayTotal, "rider")}
     <div class="profile-card">
       <div class="panel">
-        <h2>Today earning: ${money(todayTotal.earning)}</h2>
-        <p class="muted">Aaj owner ne jo data add kiya hai, wahi yahan automatic show ho raha hai.</p>
+        <h2>Today's Earning: ${money(todayTotal.earning)}</h2>
+        <p class="muted">Today's data added by the owner is displayed here automatically.</p>
         ${recordsTable(todays, false)}
       </div>
       <div class="route-card">
-        <h3>Your rate</h3>
-        <p>Default pay rate: ${money(user.payRate)} per delivered parcel. Owner record mein rate change kare to earning usi rate se calculate hogi.</p>
+        <h3>Your Rate</h3>
+        <p>Default pay rate: ${money(user.payRate)} per delivered parcel. If the owner modifies the rate in a record, earnings will be calculated using that specific rate.</p>
         <button class="btn" onclick="activeSection='history'; render()">Check past records</button>
       </div>
     </div>
@@ -992,7 +1075,7 @@ function riderContent(user, riderRecords, total) {
 }
 
 function recordsTable(records, editable) {
-  if (!records.length) return `<div class="empty">Abhi is filter mein koi record nahi hai.</div>`;
+  if (!records.length) return `<div class="empty">No records found for the selected filter.</div>`;
   const rows = records
     .map((record) => {
       const rider = getUser(record.riderId);
@@ -1047,6 +1130,8 @@ window.refreshRecordTable = refreshRecordTable;
 window.clearFilters = clearFilters;
 window.syncNow = syncNow;
 window.authMode = authMode;
+window.closeSocialAuthModal = closeSocialAuthModal;
+window.submitSocialAuth = submitSocialAuth;
 
 async function initApp() {
   renderLoading();

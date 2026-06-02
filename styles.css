@@ -613,3 +613,52 @@ th {
     flex-direction: column;
   }
 }
+
+/* Custom Social Auth Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 34, 24, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.modal-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-container {
+  width: min(100%, 420px);
+  margin: 16px;
+  padding: 30px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  transform: translateY(18px);
+  transition: transform 0.25s ease;
+}
+.modal-overlay.show .modal-container {
+  transform: translateY(0);
+}
+.modal-title {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+.modal-desc {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
