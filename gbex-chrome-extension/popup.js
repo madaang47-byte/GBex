@@ -29,15 +29,24 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // 2. Find open GBEX Dashboard tab (broad match using both URL and Title)
+      // 2. Find open GBEX Dashboard tab (precise match by title and non-admin URL)
       const allTabs = await chrome.tabs.query({});
       console.log("Detected tabs:", allTabs.map(t => ({ id: t.id, url: t.url, title: t.title })));
 
       const dashboardTab = allTabs.find(t => {
-        const urlMatches = t.url && (t.url.includes("localhost") || t.url.includes("127.0.0.1") || t.url.includes("8085"));
-        const titleMatches = t.title && t.title.includes("GBEX") && !t.title.includes("Ekart");
-        const isMock = t.url && t.url.includes("mock-ekart");
-        return (urlMatches || titleMatches) && !isMock;
+        const url = t.url || "";
+        const title = t.title || "";
+        const isMock = url.includes("mock-ekart");
+        const isNetlifyAdmin = url.includes("app.netlify.com");
+        const isGoogleSheets = url.includes("docs.google.com");
+        
+        if (isMock || isNetlifyAdmin || isGoogleSheets) return false;
+        
+        // Exact matching for live app or local server
+        const hasDashboardTitle = title.includes("Global Business Express") || title === "GBEX";
+        const hasDashboardUrl = url.includes("localhost") || url.includes("127.0.0.1") || url.includes(".netlify.app");
+        
+        return hasDashboardTitle || hasDashboardUrl;
       });
 
       if (!dashboardTab) {
@@ -82,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           const dbText = results?.[0]?.result;
           if (!dbText) {
-            showStatus("Failed to read database from GBEX Dashboard tab.", "error");
+            showStatus("Failed to read database from GBEX Dashboard tab. Please refresh the Dashboard tab and try again.", "error");
             syncBtn.disabled = false;
             return;
           }
