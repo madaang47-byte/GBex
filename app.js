@@ -121,10 +121,25 @@ async function loadCloudDb() {
   }
 }
 
-function pushCloudDb() {
+async function pushCloudDb() {
   if (!cloudEnabled()) return;
   const data = { users: db.users, records: db.records };
-  submitCloudPayload({ action: "save", data });
+  const payload = { action: "save", data };
+  
+  try {
+    await fetch(CLOUD_API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: "payload=" + encodeURIComponent(JSON.stringify(payload)),
+    });
+    console.log("Database synced to Google Sheets successfully via fetch.");
+  } catch (e) {
+    console.warn("Fetch sync failed, falling back to iframe submission:", e);
+    submitCloudPayload(payload);
+  }
 }
 
 function submitCloudPayload(payload) {
