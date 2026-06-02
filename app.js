@@ -358,7 +358,125 @@ function socialLogin(provider) {
     return;
   }
   currentSocialProvider = provider;
-  showSocialAuthModal(provider);
+  
+  if (provider === "Google") {
+    startGoogleOAuth();
+  } else if (provider === "Apple ID") {
+    startAppleOAuth();
+  } else {
+    showSocialAuthModal(provider);
+  }
+}
+
+function startGoogleOAuth() {
+  const clientId = window.GMK_CONFIG?.googleClientId;
+  if (!clientId) {
+    showSocialAuthModal("Google");
+    return;
+  }
+  
+  const width = 500;
+  const height = 600;
+  const left = (screen.width - width) / 2;
+  const top = (screen.height - height) / 2;
+  
+  const redirectUri = window.location.origin;
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=email%20profile`;
+  
+  const oauthPopup = window.open(
+    authUrl,
+    "GoogleSignIn",
+    `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
+  );
+  
+  const timer = setInterval(async () => {
+    if (!oauthPopup || oauthPopup.closed) {
+      clearInterval(timer);
+      return;
+    }
+    
+    try {
+      const currentUrl = oauthPopup.location.href;
+      if (currentUrl.includes("access_token=")) {
+        clearInterval(timer);
+        const hash = oauthPopup.location.hash;
+        oauthPopup.close();
+        
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        
+        if (accessToken) {
+          showNotice("Connecting with Google...");
+          const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          const payload = await userInfoResponse.json();
+          const email = payload.email;
+          const name = payload.name || payload.given_name || email.split("@")[0];
+          
+          completeSocialAuthLogin(email, name, "GoogleLoginOAuthSecret");
+        }
+      }
+    } catch (e) {
+      // Ignore cross-origin errors during Google sign-in redirect
+    }
+  }, 500);
+}
+
+function startAppleOAuth() {
+  const width = 450;
+  const height = 550;
+  const left = (screen.width - width) / 2;
+  const top = (screen.height - height) / 2;
+  
+  window.open(
+    "apple-login.html",
+    "AppleSignIn",
+    `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
+  );
+}
+
+// Listen for message from Apple Sign In popup window
+window.addEventListener("message", (event) => {
+  if (event.origin !== window.location.origin) return;
+  
+  if (event.data && event.data.type === "APPLE_SIGNIN_SUCCESS") {
+    const { email, password, name } = event.data;
+    completeSocialAuthLogin(email, name, password);
+  }
+});
+
+function completeSocialAuthLogin(email, name, password) {
+  const role = authMode;
+  const cleanEmail = email.toLowerCase().trim();
+  
+  let user = db.users.find((item) => item.email.toLowerCase() === cleanEmail && item.role === role);
+  
+  if (user) {
+    if (password === "GoogleLoginOAuthSecret") {
+      user.password = password;
+    } else if (user.password !== password) {
+      showNotice("Social sign-in authentication error. Incorrect password.");
+      return;
+    }
+  } else {
+    user = {
+      id: `${role}-${Date.now()}`,
+      role: role,
+      name: name,
+      email: cleanEmail,
+      password: password,
+      phone: ""
+    };
+    if (role === "rider") {
+      user.payRate = 14;
+    }
+    db.users.push(user);
+  }
+  
+  db.session = { userId: user.id };
+  saveDb();
+  render();
 }
 
 function showSocialAuthModal(provider) {
