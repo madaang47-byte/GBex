@@ -604,63 +604,121 @@ function render() {
   return renderRider(current);
 }
 
+function renderGlobalHeader() {
+  const announcements = [
+    "🚀 GBEX Express: Delivering promises, one parcel at a time! Fast, secure, and reliable.",
+    "📦 Active Tracking: Local courier hub database is fully synced in real time.",
+    "🏆 Excellence in Action: Over 10,000+ logistics routes monitored and completed successfully.",
+    "🛣️ Drive Safe, Deliver Happy! Our dedicated team keeps businesses moving.",
+    "⚡ Admin portal and rider tools are running under strict Google Apps Script secure authentication.",
+    "💼 Founded and managed under the direct leadership of Gourav Madaan, Karnal."
+  ];
+  const tickerText = announcements.join(" &nbsp;•&nbsp;&nbsp;🚀&nbsp;&nbsp;&nbsp; ");
+
+  return `
+    <header class="global-header">
+      <div class="header-logo" style="display: flex; align-items: center; gap: 8px;">
+        <span style="background: var(--brand); color: white; padding: 4px 10px; border-radius: 6px; font-weight: 900; box-shadow: 0 4px 10px rgba(220, 0, 27, 0.25);">GB</span>
+        <span class="logo-text" style="color: white; font-weight: 800; font-size: 20px; letter-spacing: 0.5px;">EX</span>
+      </div>
+      <div class="ticker-wrap">
+        <div class="ticker">
+          <span>${tickerText}</span>
+        </div>
+      </div>
+    </header>
+  `;
+}
+
+function renderGlobalFooter() {
+  return `
+    <footer class="global-footer">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h3>GBEX Express Logistics</h3>
+          <p>We are a state-of-the-art logistics and freight delivery network. We specialize in local parcel delivery, courier hub operations, and express tracking software integrations. Our operations are fully transparent and optimized for performance.</p>
+          <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px;">
+            <span style="background: rgba(255, 255, 255, 0.08); padding: 6px 12px; border-radius: 4px; font-size: 12.5px; color: white;">📍 Karnal Hub</span>
+            <span style="background: rgba(255, 255, 255, 0.08); padding: 6px 12px; border-radius: 4px; font-size: 12.5px; color: white;">⚡ Real-time Sync</span>
+            <span style="background: rgba(255, 255, 255, 0.08); padding: 6px 12px; border-radius: 4px; font-size: 12.5px; color: white;">🛡️ Secure Portal</span>
+          </div>
+        </div>
+        <div class="footer-contact">
+          <h4>Corporate Office Details</h4>
+          <p><strong>Owner:</strong> Gourav Madaan</p>
+          <p><strong>Phone:</strong> <a href="tel:9103320212" style="color: var(--brand); text-decoration: none; font-weight: bold;">+91 9103320212</a></p>
+          <p><strong>Office Address:</strong> Hansi Road, Gali No. 11, Karnal, Haryana - 132001</p>
+          <p><strong>System Status:</strong> <span style="color: #10B981; font-weight: bold;">● Fully Synced & Active</span></p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; ${new Date().getFullYear()} GBEX Express. All Rights Reserved. Designed & Developed for logistics tracking and fleet performance management.
+      </div>
+    </footer>
+  `;
+}
+
 function renderWelcome() {
   app.innerHTML = `
-    <section class="shell">
-      <div class="hero">
-        <div class="brand-row">
+    <div class="welcome-container">
+      ${renderGlobalHeader()}
+      <section class="shell">
+        <div class="hero">
           <div class="brand-row">
-            <span class="logo">GB</span>
-            <div>
-              <p class="brand-title">GBEX</p>
-              <p class="brand-subtitle">Global Business Express</p>
+            <div class="brand-row">
+              <span class="logo">GB</span>
+              <div>
+                <p class="brand-title">GBEX</p>
+                <p class="brand-subtitle">Global Business Express</p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h1>Global Business Express</h1>
+            <div class="hero-stats">
+              <div class="hero-stat"><strong>${getRiders().length}</strong><span>Active Riders</span></div>
+              <div class="hero-stat"><strong>₹14</strong><span>Pay rate per parcel</span></div>
+              <div class="hero-stat"><strong>${today}</strong><span>Today view ready</span></div>
             </div>
           </div>
         </div>
-        <div>
-          <h1>Global Business Express</h1>
-          <div class="hero-stats">
-            <div class="hero-stat"><strong>${getRiders().length}</strong><span>Active Riders</span></div>
-            <div class="hero-stat"><strong>₹14</strong><span>Pay rate per parcel</span></div>
-            <div class="hero-stat"><strong>${today}</strong><span>Today view ready</span></div>
+        <div class="auth-panel">
+          <div class="auth-card">
+            <p class="eyebrow">Secure login</p>
+            <h2>Welcome back</h2>
+            <p class="muted">Choose your role to continue.</p>
+            <div class="tabs">
+              <button class="tab ${authMode === "rider" ? "active" : ""}" onclick="authMode='rider'; renderWelcome()">Rider</button>
+              <button class="tab ${authMode === "owner" ? "active" : ""}" onclick="authMode='owner'; renderWelcome()">Owner</button>
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <input id="email" type="email" placeholder="email@example.com" />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input id="password" type="password" placeholder="Enter your password" />
+            </div>
+            <div class="auth-actions">
+              <button class="btn full" onclick="login('${authMode}')">Login</button>
+              <button class="link-btn" onclick="forgotPassword()">Forgot password?</button>
+            </div>
+            <div class="social-grid">
+              <button class="btn line social-btn" onclick="socialLogin('Google')"><span class="social-icon google">G</span>Continue with Google</button>
+              <button class="btn line social-btn" onclick="socialLogin('Apple ID')"><span class="social-icon apple">A</span>Continue with Apple</button>
+            </div>
+            <hr style="border:0;border-top:1px solid var(--line);margin:22px 0" />
+            <p class="eyebrow">${authMode === "rider" ? "New rider" : "New owner"}</p>
+            <div class="field"><label>Name</label><input id="signupName" placeholder="${authMode === "rider" ? "Rider name" : "Owner name"}" /></div>
+            <div class="field"><label>Email</label><input id="signupEmail" type="email" placeholder="${authMode === "rider" ? "newrider@email.com" : "newowner@email.com"}" /></div>
+            <div class="field"><label>Password</label><input id="signupPassword" type="password" placeholder="Create password" /></div>
+            <button class="btn secondary full" onclick="signup()">${authMode === "rider" ? "Create rider account" : "Create owner account"}</button>
+            <div id="notice" class="notice"></div>
           </div>
         </div>
-      </div>
-      <div class="auth-panel">
-        <div class="auth-card">
-          <p class="eyebrow">Secure login</p>
-          <h2>Welcome back</h2>
-          <p class="muted">Choose your role to continue.</p>
-          <div class="tabs">
-            <button class="tab ${authMode === "rider" ? "active" : ""}" onclick="authMode='rider'; renderWelcome()">Rider</button>
-            <button class="tab ${authMode === "owner" ? "active" : ""}" onclick="authMode='owner'; renderWelcome()">Owner</button>
-          </div>
-          <div class="field">
-            <label>Email</label>
-            <input id="email" type="email" placeholder="email@example.com" />
-          </div>
-          <div class="field">
-            <label>Password</label>
-            <input id="password" type="password" placeholder="Enter your password" />
-          </div>
-          <div class="auth-actions">
-            <button class="btn full" onclick="login('${authMode}')">Login</button>
-            <button class="link-btn" onclick="forgotPassword()">Forgot password?</button>
-          </div>
-          <div class="social-grid">
-            <button class="btn line social-btn" onclick="socialLogin('Google')"><span class="social-icon google">G</span>Continue with Google</button>
-            <button class="btn line social-btn" onclick="socialLogin('Apple ID')"><span class="social-icon apple">A</span>Continue with Apple</button>
-          </div>
-          <hr style="border:0;border-top:1px solid var(--line);margin:22px 0" />
-          <p class="eyebrow">${authMode === "rider" ? "New rider" : "New owner"}</p>
-          <div class="field"><label>Name</label><input id="signupName" placeholder="${authMode === "rider" ? "Rider name" : "Owner name"}" /></div>
-          <div class="field"><label>Email</label><input id="signupEmail" type="email" placeholder="${authMode === "rider" ? "newrider@email.com" : "newowner@email.com"}" /></div>
-          <div class="field"><label>Password</label><input id="signupPassword" type="password" placeholder="Create password" /></div>
-          <button class="btn secondary full" onclick="signup()">${authMode === "rider" ? "Create rider account" : "Create owner account"}</button>
-          <div id="notice" class="notice"></div>
-        </div>
-      </div>
-    </section>
+      </section>
+      ${renderGlobalFooter()}
+    </div>
   `;
 }
 
@@ -689,22 +747,26 @@ function renderOwner(user) {
   const all = db.records;
   const total = totals(all);
   app.innerHTML = `
-    <section class="app-shell">
-      ${sidebar(user, "Owner Control")}
-      <main class="content">
-        <div class="topbar">
-          <div>
-            <p class="eyebrow">Private owner dashboard</p>
-            <h1>GBEX</h1>
+    <div class="welcome-container">
+      ${renderGlobalHeader()}
+      <section class="app-shell">
+        ${sidebar(user, "Owner Control")}
+        <main class="content">
+          <div class="topbar">
+            <div>
+              <p class="eyebrow">Private owner dashboard</p>
+              <h1>GBEX Dashboard</h1>
+            </div>
+            <div class="row-actions">
+              <button class="btn" onclick="syncNow()">Sync to Google Sheet</button>
+              <button class="btn secondary" onclick="logout()">Logout</button>
+            </div>
           </div>
-          <div class="row-actions">
-            <button class="btn" onclick="syncNow()">Sync to Google Sheet</button>
-            <button class="btn secondary" onclick="logout()">Logout</button>
-          </div>
-        </div>
-        ${ownerContent(total)}
-      </main>
-    </section>
+          ${ownerContent(total)}
+        </main>
+      </section>
+      ${renderGlobalFooter()}
+    </div>
   `;
 }
 
@@ -714,6 +776,13 @@ function ownerContent(total) {
   if (activeSection === "records") return renderOwnerRecords();
   return `
     ${metrics(total)}
+    <div class="dashboard-banner-card">
+      <img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80" alt="GBEX Fleet Operations" />
+      <div class="dashboard-banner-text">
+        <h3>GBEX Fleet Operations &amp; Control</h3>
+        <p>Welcome to your central administration hub. View real-time parcel counts, route distributions, and active courier metrics. Synchronize jobsheets seamlessly with the Google Sheet database using the sync controls above.</p>
+      </div>
+    </div>
     <div class="profile-card">
       <div class="panel">
         <h2>Today's overview</h2>
@@ -1158,19 +1227,23 @@ function renderRider(user) {
   const riderRecords = db.records.filter((record) => record.riderId === user.id);
   const total = totals(riderRecords);
   app.innerHTML = `
-    <section class="app-shell">
-      ${sidebar(user, "Rider Dashboard")}
-      <main class="content">
-        <div class="topbar">
-          <div>
-            <p class="eyebrow">Read only delivery records</p>
-            <h1>Hi, ${user.name}</h1>
+    <div class="welcome-container">
+      ${renderGlobalHeader()}
+      <section class="app-shell">
+        ${sidebar(user, "Rider Dashboard")}
+        <main class="content">
+          <div class="topbar">
+            <div>
+              <p class="eyebrow">Read only delivery records</p>
+              <h1>Hi, ${user.name}</h1>
+            </div>
+            <button class="btn secondary" onclick="logout()">Logout</button>
           </div>
-          <button class="btn secondary" onclick="logout()">Logout</button>
-        </div>
-        ${riderContent(user, riderRecords, total)}
-      </main>
-    </section>
+          ${riderContent(user, riderRecords, total)}
+        </main>
+      </section>
+      ${renderGlobalFooter()}
+    </div>
   `;
 }
 
@@ -1192,6 +1265,13 @@ function riderContent(user, riderRecords, total) {
   }
   return `
     ${metrics(todayTotal, "rider")}
+    <div class="dashboard-banner-card">
+      <img src="https://images.unsplash.com/photo-1569025690938-a00729c9e1f9?auto=format&fit=crop&w=800&q=80" alt="Rider Courier Operations" />
+      <div class="dashboard-banner-text">
+        <h3>Courier Delivery Portal</h3>
+        <p>Keep track of your active route, parcel intake, successfully delivered shipments, and payouts. Data is read-only. For updates, please contact Gourav Madaan (+91 9103320212).</p>
+      </div>
+    </div>
     <div class="profile-card">
       <div class="panel">
         <h2>Today's Earning: ${money(todayTotal.earning)}</h2>
