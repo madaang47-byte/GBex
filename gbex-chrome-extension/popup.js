@@ -1,4 +1,4 @@
-const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbyEb_IjpYoRM8QykYC-L8uLmnxUjBF3LxodOZvlCwkEKtNxG47vfP8dQsNfNhvDx19M/exec";
+const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbxELx52rTQm_V1azL2lEyK4yrsgBKwsw-P0Um1ThN4207FRIXKSl8KnkISHEyjagvao/exec";
 
 document.addEventListener("DOMContentLoaded", () => {
   const syncBtn = document.getElementById("syncBtn");
