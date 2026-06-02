@@ -1,15 +1,15 @@
 :root {
-  --ink: #17211b;
-  --muted: #5b6961;
-  --line: #dce5dc;
-  --paper: #f7faf4;
+  --ink: #1c1c1c;
+  --muted: #6c757d;
+  --line: #e2e2e5;
+  --paper: #f6f6f9;
   --panel: #ffffff;
-  --brand: #0c7c59;
-  --brand-dark: #07583f;
+  --brand: #dc001b;
+  --brand-dark: #b80014;
   --gold: #f2b84b;
-  --red: #c54d4d;
-  --blue: #315f9f;
-  --shadow: 0 18px 60px rgba(23, 33, 27, 0.14);
+  --red: #dc001b;
+  --blue: #2a4e80;
+  --shadow: 0 8px 30px rgba(28, 28, 28, 0.06);
 }
 
 * {
@@ -21,9 +21,9 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(242, 184, 75, 0.32), transparent 30rem),
-    linear-gradient(135deg, #eef7ee 0%, #f9fbf6 45%, #edf3f7 100%);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    radial-gradient(circle at top left, rgba(220, 0, 27, 0.08), transparent 40rem),
+    linear-gradient(135deg, #fbfbfb 0%, #f3f3f5 100%);
+  font-family: 'Outfit', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 @keyframes riseIn {
@@ -72,7 +72,7 @@ button {
   color: white;
   overflow: hidden;
   background:
-    linear-gradient(rgba(8, 46, 34, 0.72), rgba(7, 37, 31, 0.7)),
+    linear-gradient(rgba(26, 26, 26, 0.85), rgba(184, 0, 20, 0.35)),
     url("https://images.unsplash.com/photo-1609143739217-01b60dad1c67?auto=format&fit=crop&w=1500&q=80") center/cover;
 }
 
@@ -107,9 +107,9 @@ button {
   width: 56px;
   height: 56px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #f2b84b 0%, #e7f5d8 100%);
-  color: #092218;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+  background: linear-gradient(135deg, #dc001b 0%, #a80010 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(220, 0, 27, 0.25);
   font-weight: 900;
   letter-spacing: 0;
   overflow: hidden;
@@ -119,7 +119,7 @@ button {
   content: "";
   position: absolute;
   inset: 8px;
-  border: 2px solid rgba(9, 34, 24, 0.24);
+  border: 2px solid rgba(255, 255, 255, 0.25);
   border-left-color: transparent;
   border-radius: 6px;
 }
@@ -129,7 +129,7 @@ button {
   position: absolute;
   right: 6px;
   bottom: 5px;
-  color: var(--brand-dark);
+  color: #ffffff;
   font-size: 9px;
   font-weight: 900;
 }
@@ -237,7 +237,7 @@ button {
   margin: 24px 0;
   padding: 5px;
   border-radius: 8px;
-  background: #eef5ed;
+  background: #f0f0f2;
 }
 
 .tab {
@@ -251,7 +251,7 @@ button {
 .tab.active {
   color: white;
   background: var(--brand);
-  box-shadow: 0 10px 24px rgba(12, 124, 89, 0.22);
+  box-shadow: 0 8px 20px rgba(220, 0, 27, 0.25);
 }
 
 .field {
@@ -300,13 +300,13 @@ select:focus {
 
 .btn:hover {
   background: var(--brand-dark);
-  box-shadow: 0 12px 28px rgba(12, 124, 89, 0.22);
+  box-shadow: 0 8px 20px rgba(220, 0, 27, 0.25);
   transform: translateY(-1px);
 }
 
 .btn.secondary {
   color: var(--ink);
-  background: #edf4eb;
+  background: #f1f1f3;
 }
 
 .btn.danger {
@@ -391,7 +391,8 @@ select:focus {
 .sidebar {
   padding: 24px;
   color: white;
-  background: #10231a;
+  background: #1c1c1c;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sidebar .logo {
@@ -413,7 +414,12 @@ select:focus {
   font-weight: 800;
 }
 
-.nav button.active,
+.nav button.active {
+  color: white;
+  background: var(--brand);
+  box-shadow: 0 4px 12px rgba(220, 0, 27, 0.25);
+}
+
 .nav button:hover {
   color: white;
   background: rgba(255, 255, 255, 0.12);
@@ -518,8 +524,8 @@ th {
   display: inline-flex;
   padding: 5px 9px;
   border-radius: 999px;
-  background: #ecf5ef;
-  color: var(--brand-dark);
+  background: #fdeaea;
+  color: var(--brand);
   font-weight: 900;
   font-size: 12px;
 }
@@ -542,7 +548,7 @@ th {
   padding: 18px;
   border-radius: 8px;
   color: white;
-  background: linear-gradient(135deg, #0c7c59, #315f9f);
+  background: linear-gradient(135deg, #dc001b, #1c1c1c);
   position: relative;
   overflow: hidden;
 }
@@ -551,7 +557,7 @@ th {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.18), transparent 55%);
+  background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.15), transparent 55%);
   transform: translateX(-100%);
   animation: fleetLine 6.5s ease-in-out infinite;
 }
