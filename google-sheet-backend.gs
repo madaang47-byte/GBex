@@ -120,7 +120,7 @@ function handleVerifyOTP(email, otp) {
     return jsonResponse({ ok: false, error: "No OTP request found for this email. Please request a new one." });
   }
   
-  if (entry.otp !== otp.toString().trim()) {
+  if (entry.otp.toString().trim() !== otp.toString().trim()) {
     return jsonResponse({ ok: false, error: "Invalid verification code. Please try again." });
   }
   
