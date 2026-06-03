@@ -358,14 +358,7 @@ function socialLogin(provider) {
     return;
   }
   currentSocialProvider = provider;
-  
-  if (provider === "Google") {
-    startGoogleOAuth();
-  } else if (provider === "Apple ID") {
-    startAppleOAuth();
-  } else {
-    showSocialAuthModal(provider);
-  }
+  showSocialAuthModal(provider);
 }
 
 function startGoogleOAuth() {
@@ -414,7 +407,7 @@ function startGoogleOAuth() {
           const email = payload.email;
           const name = payload.name || payload.given_name || email.split("@")[0];
           
-          completeSocialAuthLogin(email, name, "GoogleLoginOAuthSecret");
+          completeSocialAuthLogin(email, name, "GoogleLoginOAuthSecret", "Google");
         }
       }
     } catch (e) {
@@ -442,11 +435,11 @@ window.addEventListener("message", (event) => {
   
   if (event.data && event.data.type === "APPLE_SIGNIN_SUCCESS") {
     const { email, password, name } = event.data;
-    completeSocialAuthLogin(email, name, password);
+    completeSocialAuthLogin(email, name, password, "Apple ID");
   }
 });
 
-function completeSocialAuthLogin(email, name, password) {
+function completeSocialAuthLogin(email, name, password, provider = "") {
   const role = authMode;
   const cleanEmail = email.toLowerCase().trim();
   
@@ -474,6 +467,11 @@ function completeSocialAuthLogin(email, name, password) {
     db.users.push(user);
   }
   
+  if (provider) {
+    localStorage.setItem(`gbex-last-social-email-${provider.toLowerCase().replace(" ", "")}`, cleanEmail);
+    localStorage.setItem("gbex-last-social-email", cleanEmail);
+  }
+  
   db.session = { userId: user.id };
   saveDb();
   render();
@@ -488,10 +486,125 @@ function showSocialAuthModal(provider) {
     document.body.appendChild(modal);
   }
   
+  // Render loading state for session check feedback
   modal.innerHTML = `
     <div class="modal-container">
       <h3 class="modal-title" style="margin: 0 0 8px; font-size: 24px; color: var(--ink);">Sign in with ${provider}</h3>
-      <p class="modal-desc" style="margin: 0 0 20px; font-size: 14px; color: var(--muted);">Please enter your ${provider} account details to login securely.</p>
+      <p class="modal-desc" style="margin: 0 0 20px; font-size: 14.5px; color: var(--muted);">Checking for active ${provider} accounts on this browser...</p>
+      <div class="pulse-loader">
+        <div class="pulse-dot"></div>
+        <div class="pulse-dot"></div>
+        <div class="pulse-dot"></div>
+      </div>
+      <p style="font-size: 12.5px; color: var(--muted); text-align: center; margin-top: 10px;">Querying active browser profile credentials...</p>
+    </div>
+  `;
+  
+  setTimeout(() => modal.classList.add("show"), 10);
+  
+  // Probe database and cache for active account
+  setTimeout(() => {
+    const role = authMode;
+    const cleanProviderName = provider.toLowerCase().replace(" ", "");
+    const cachedEmail = localStorage.getItem(`gbex-last-social-email-${cleanProviderName}`) || localStorage.getItem("gbex-last-social-email");
+    
+    let detectedUser = null;
+    if (cachedEmail) {
+      detectedUser = db.users.find((u) => u.email.toLowerCase() === cachedEmail.toLowerCase() && u.role === role);
+    }
+    if (!detectedUser) {
+      // Direct fallback to match default active accounts for this role
+      detectedUser = db.users.find((u) => u.role === role);
+    }
+    
+    if (detectedUser) {
+      modal.innerHTML = `
+        <div class="modal-container">
+          <h3 class="modal-title" style="margin: 0 0 8px; font-size: 24px; color: var(--ink);">Sign in with ${provider}</h3>
+          <p class="modal-desc" style="margin: 0 0 16px; font-size: 14.5px; color: var(--muted);">Active browser session detected. Select below to login instantly.</p>
+          
+          <div class="detected-account-card" onclick="autoLoginSocial('${detectedUser.email}', '${detectedUser.name}', '${provider}')">
+            <div class="detected-avatar">${detectedUser.name.charAt(0).toUpperCase()}</div>
+            <div class="detected-info">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <p class="detected-name" style="margin:0; font-weight:700;">${detectedUser.name}</p>
+                <span class="detected-badge">Logged In</span>
+              </div>
+              <p class="detected-email" style="margin:2px 0 0; font-size:13.5px; color:var(--muted);">${detectedUser.email}</p>
+            </div>
+          </div>
+          
+          <div style="margin-top: 22px; text-align: center;">
+            <button class="link-btn" onclick="showManualSocialAuth('${provider}')" style="font-size: 14px; color: var(--brand);">Sign in with a different email</button>
+          </div>
+          
+          <div class="modal-footer" style="display: flex; justify-content: flex-end; margin-top: 20px;">
+            <button class="btn secondary" onclick="closeSocialAuthModal()">Cancel</button>
+          </div>
+        </div>
+      `;
+    } else {
+      showManualSocialAuth(provider);
+    }
+  }, 950);
+}
+
+function autoLoginSocial(email, name, provider) {
+  const modal = document.querySelector("#socialAuthModal");
+  if (modal) {
+    modal.innerHTML = `
+      <div class="modal-container">
+        <h3 class="modal-title" style="color: var(--ink);">Logging in...</h3>
+        <p class="modal-desc" style="color: var(--muted);">Signing you in securely as ${email}</p>
+        <div class="pulse-loader">
+          <div class="pulse-dot"></div>
+          <div class="pulse-dot"></div>
+          <div class="pulse-dot"></div>
+        </div>
+      </div>
+    `;
+  }
+  
+  setTimeout(() => {
+    const cleanEmail = email.toLowerCase().trim();
+    localStorage.setItem(`gbex-last-social-email-${provider.toLowerCase().replace(" ", "")}`, cleanEmail);
+    localStorage.setItem("gbex-last-social-email", cleanEmail);
+    completeSocialAuthLogin(email, name, "GoogleLoginOAuthSecret", provider);
+    closeSocialAuthModal();
+  }, 500);
+}
+
+function showManualSocialAuth(provider) {
+  const modal = document.querySelector("#socialAuthModal");
+  if (!modal) return;
+  
+  const googleClientId = window.GMK_CONFIG?.googleClientId;
+  const isGoogle = provider === "Google";
+  
+  let oAuthBtnHtml = "";
+  if (isGoogle && googleClientId) {
+    oAuthBtnHtml = `
+      <button class="btn line full" onclick="closeSocialAuthModal(); startGoogleOAuth()" style="margin-bottom:15px; display:flex; gap:8px; justify-content:center;">
+        <span class="social-icon google">G</span> Launch Google Consent Popup
+      </button>
+      <div style="text-align:center; margin-bottom:15px; font-size:12px; color:var(--muted); font-weight:700;">OR SIGN IN MANUALLY</div>
+    `;
+  } else if (provider === "Apple ID") {
+    oAuthBtnHtml = `
+      <button class="btn line full" onclick="closeSocialAuthModal(); startAppleOAuth()" style="margin-bottom:15px; display:flex; gap:8px; justify-content:center;">
+        <span class="social-icon apple"></span> Launch Apple Sign-In Window
+      </button>
+      <div style="text-align:center; margin-bottom:15px; font-size:12px; color:var(--muted); font-weight:700;">OR SIGN IN MANUALLY</div>
+    `;
+  }
+  
+  modal.innerHTML = `
+    <div class="modal-container">
+      <h3 class="modal-title" style="margin: 0 0 8px; font-size: 24px; color: var(--ink);">Sign in with ${provider}</h3>
+      <p class="modal-desc" style="margin: 0 0 20px; font-size: 14px; color: var(--muted);">Please enter your details to sign in securely.</p>
+      
+      ${oAuthBtnHtml}
+      
       <div class="field">
         <label>Email Address</label>
         <input id="socialEmail" type="email" placeholder="name@domain.com" required />
@@ -503,12 +616,10 @@ function showSocialAuthModal(provider) {
       <div id="socialAuthNotice" class="notice"></div>
       <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
         <button class="btn secondary" onclick="closeSocialAuthModal()">Cancel</button>
-        <button class="btn" onclick="submitSocialAuth()">Continue</button>
+        <button class="btn" onclick="submitSocialAuth('${provider}')">Continue</button>
       </div>
     </div>
   `;
-  
-  setTimeout(() => modal.classList.add("show"), 10);
 }
 
 function closeSocialAuthModal() {
@@ -518,7 +629,7 @@ function closeSocialAuthModal() {
   }
 }
 
-function submitSocialAuth() {
+function submitSocialAuth(provider) {
   const emailVal = document.querySelector("#socialEmail").value.trim();
   const passwordVal = document.querySelector("#socialPassword").value;
   const notice = document.querySelector("#socialAuthNotice");
@@ -566,6 +677,11 @@ function submitSocialAuth() {
       user.payRate = 14;
     }
     db.users.push(user);
+  }
+  
+  if (provider) {
+    localStorage.setItem(`gbex-last-social-email-${provider.toLowerCase().replace(" ", "")}`, cleanEmail);
+    localStorage.setItem("gbex-last-social-email", cleanEmail);
   }
   
   db.session = { userId: user.id };
