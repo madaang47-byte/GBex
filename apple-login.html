@@ -14,6 +14,11 @@
       --text-color: #1d1d1f;
       --text-muted: #86868b;
     }
+    
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       padding: 0;
@@ -25,90 +30,178 @@
       align-items: center;
       min-height: 100vh;
     }
+
     .card {
       width: 100%;
-      max-width: 380px;
+      max-width: 440px;
       background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      padding: 36px 24px;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      padding: 44px 36px;
       text-align: center;
     }
+
     .apple-logo {
-      font-size: 40px;
-      margin-bottom: 16px;
+      font-size: 56px;
+      margin-bottom: 12px;
       color: var(--apple-black);
+      line-height: 1;
     }
+
     h2 {
-      font-size: 22px;
+      font-size: 26px;
       font-weight: 600;
       margin: 0 0 8px;
+      letter-spacing: -0.5px;
     }
+
     p.desc {
-      font-size: 14px;
+      font-size: 15px;
       color: var(--text-muted);
-      margin: 0 0 24px;
+      margin: 0 0 28px;
     }
-    .field {
-      margin-bottom: 16px;
+
+    .account-picker {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
       text-align: left;
     }
+
+    .account-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      width: 100%;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--border-color);
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .account-row:last-child {
+      border-bottom: none;
+    }
+
+    .account-row:hover {
+      background-color: #f9f9fb;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #f5f5f7;
+      color: #1d1d1f;
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      font-size: 16px;
+      border: 1px solid var(--border-color);
+    }
+
+    .info {
+      flex-grow: 1;
+    }
+
+    .name {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .email {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin: 2px 0 0;
+    }
+
+    .chevron {
+      color: var(--text-muted);
+      font-size: 18px;
+      font-weight: 300;
+    }
+
+    .use-another-text {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--apple-blue);
+    }
+
+    .form-wrapper {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      text-align: left;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
     label {
-      display: block;
       font-size: 12px;
       font-weight: 600;
       color: var(--text-muted);
-      margin-bottom: 6px;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
+
     input {
       width: 100%;
-      box-sizing: border-box;
-      min-height: 42px;
-      padding: 10px 12px;
+      min-height: 44px;
+      padding: 10px 14px;
       border: 1px solid var(--border-color);
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 15px;
       outline: none;
       transition: border-color 0.2s;
     }
+
     input:focus {
       border-color: var(--apple-black);
     }
+
     .error-notice {
       display: none;
       font-size: 13px;
       color: #df2c2c;
       background: #fdf2f2;
-      padding: 8px 12px;
-      border-radius: 6px;
+      padding: 10px 14px;
+      border-radius: 8px;
       margin-bottom: 16px;
-      text-align: left;
     }
-    .error-notice.show {
-      display: block;
-    }
+
     .btn {
       width: 100%;
-      min-height: 42px;
+      min-height: 44px;
       background: var(--apple-black);
       color: #ffffff;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 15px;
       font-weight: 500;
       cursor: pointer;
       transition: background-color 0.2s;
       margin-top: 10px;
     }
+
     .btn:hover {
       background: var(--apple-dark-gray);
     }
+
     .btn.secondary {
       background: transparent;
       color: var(--apple-blue);
-      margin-top: 8px;
+      margin-top: 10px;
     }
+
     .btn.secondary:hover {
       text-decoration: underline;
     }
@@ -117,26 +210,79 @@
 <body>
   <div class="card">
     <div class="apple-logo"></div>
-    <h2>Sign in with Apple ID</h2>
-    <p class="desc">Use your Apple ID to sign in to GBEX.</p>
+    <h2 id="title">Sign in with Apple ID</h2>
+    <p class="desc" id="desc">Use your Apple ID to sign in to GBEX.</p>
     
     <div id="errorBox" class="error-notice"></div>
     
-    <div class="field">
-      <label>Apple ID</label>
-      <input id="appleEmail" type="email" placeholder="email@example.com" required>
+    <!-- Account Chooser List -->
+    <div id="chooserList" class="account-picker">
+      <!-- Active Apple ID -->
+      <button class="account-row" onclick="selectAppleAccount('madaang47@icloud.com', 'Gourav Madaan')">
+        <div class="avatar">GM</div>
+        <div class="info">
+          <p class="name">Gourav Madaan</p>
+          <p class="email">madaang47@icloud.com</p>
+        </div>
+        <div class="chevron">›</div>
+      </button>
+      
+      <!-- Use another account -->
+      <button class="account-row" onclick="showForm()">
+        <div class="avatar" style="border-style: dashed; background: none;">+</div>
+        <div class="info">
+          <span class="use-another-text">Use a different Apple ID</span>
+        </div>
+        <div class="chevron">›</div>
+      </button>
     </div>
-    
-    <div class="field">
-      <label>Password</label>
-      <input id="applePassword" type="password" placeholder="Password" required>
+
+    <!-- Manual input form -->
+    <div id="manualForm" class="form-wrapper">
+      <div class="field">
+        <label>Apple ID</label>
+        <input id="appleEmail" type="email" placeholder="email@example.com" required>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="applePassword" type="password" placeholder="Password" required>
+      </div>
+      
+      <button class="btn" onclick="submitAppleAuth()">Sign In</button>
+      <button class="btn secondary" onclick="showChooser()">Back</button>
     </div>
-    
-    <button class="btn" onclick="submitAppleAuth()">Sign In</button>
-    <button class="btn secondary" onclick="window.close()">Cancel</button>
+
+    <button class="btn secondary" onclick="window.close()" style="margin-top:14px; font-size:14px;">Cancel</button>
   </div>
 
   <script>
+    const parentHost = window.opener ? window.opener.location.host : "gbex1.netlify.app";
+    document.getElementById("desc").textContent = "Use your Apple ID to sign in to " + parentHost + ".";
+
+    function selectAppleAccount(email, name) {
+      if (window.opener) {
+        window.opener.postMessage({
+          type: "APPLE_SIGNIN_SUCCESS",
+          email: email.toLowerCase(),
+          name: name,
+          password: "AppleLoginOAuthSecret"
+        }, window.location.origin);
+        window.close();
+      }
+    }
+
+    function showForm() {
+      document.getElementById("chooserList").style.display = "none";
+      document.getElementById("manualForm").style.display = "flex";
+      document.getElementById("appleEmail").focus();
+    }
+
+    function showChooser() {
+      document.getElementById("chooserList").style.display = "block";
+      document.getElementById("manualForm").style.display = "none";
+      document.getElementById("errorBox").style.display = "none";
+    }
+
     function submitAppleAuth() {
       const email = document.getElementById("appleEmail").value.trim();
       const password = document.getElementById("applePassword").value;
@@ -144,18 +290,17 @@
 
       if (!email || !password) {
         errorBox.textContent = "Please fill in all fields.";
-        errorBox.classList.add("show");
+        errorBox.style.display = "block";
         return;
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         errorBox.textContent = "Please enter a valid email address.";
-        errorBox.classList.add("show");
+        errorBox.style.display = "block";
         return;
       }
 
-      // Send the data back to the parent window
       if (window.opener) {
         window.opener.postMessage({
           type: "APPLE_SIGNIN_SUCCESS",

@@ -358,7 +358,27 @@ function socialLogin(provider) {
     return;
   }
   currentSocialProvider = provider;
-  showSocialAuthModal(provider);
+  
+  if (provider === "Google") {
+    startGoogleLoginPopup();
+  } else if (provider === "Apple ID") {
+    startAppleOAuth();
+  } else {
+    showSocialAuthModal(provider);
+  }
+}
+
+function startGoogleLoginPopup() {
+  const width = 520;
+  const height = 620;
+  const left = (screen.width - width) / 2;
+  const top = (screen.height - height) / 2;
+  
+  window.open(
+    `google-login.html?role=${authMode}`,
+    "GoogleSignInChooser",
+    `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
+  );
 }
 
 function startGoogleOAuth() {
@@ -423,19 +443,22 @@ function startAppleOAuth() {
   const top = (screen.height - height) / 2;
   
   window.open(
-    "apple-login.html",
+    `apple-login.html?role=${authMode}`,
     "AppleSignIn",
     `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
   );
 }
 
-// Listen for message from Apple Sign In popup window
+// Listen for message from Apple / Google Sign In popup window
 window.addEventListener("message", (event) => {
   if (event.origin !== window.location.origin) return;
   
   if (event.data && event.data.type === "APPLE_SIGNIN_SUCCESS") {
     const { email, password, name } = event.data;
     completeSocialAuthLogin(email, name, password, "Apple ID");
+  } else if (event.data && event.data.type === "GOOGLE_SIGNIN_SUCCESS") {
+    const { email, password, name } = event.data;
+    completeSocialAuthLogin(email, name, password, "Google");
   }
 });
 
