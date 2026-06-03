@@ -333,19 +333,7 @@
     <div class="right-pane">
       <!-- Account Chooser List -->
       <div id="accountChooser" class="account-chooser-list">
-        <!-- Gourav Madaan Active Account -->
-        <button class="account-item" onclick="selectAccount('madaang47@gmail.com', 'Gourav Madaan')">
-          <div class="avatar-wrapper">
-            <div class="avatar">
-              <!-- Hardcoded nice letters avatar -->
-              GM
-            </div>
-          </div>
-          <div class="account-info">
-            <p class="account-name">Gourav Madaan</p>
-            <p class="account-email">madaang47@gmail.com</p>
-          </div>
-        </button>
+        <!-- Accounts will be dynamically populated here -->
         
         <!-- Use another account item -->
         <button class="account-item" onclick="switchToManual()">
@@ -401,27 +389,96 @@
     const urlParams = new URLSearchParams(window.location.search);
     const role = urlParams.get("role") || "rider";
 
-    // Display real Google consent popup button if Client ID is configured in parent config.js
-    const googleClientId = window.opener && window.opener.GMK_CONFIG?.googleClientId;
-    if (googleClientId) {
-      const consentBtn = document.createElement("button");
-      consentBtn.className = "action-btn";
-      consentBtn.style.backgroundColor = "transparent";
-      consentBtn.style.color = "var(--google-blue)";
-      consentBtn.style.border = "1px solid var(--google-border)";
-      consentBtn.style.marginBottom = "15px";
-      consentBtn.style.width = "100%";
-      consentBtn.style.borderRadius = "100px";
-      consentBtn.style.padding = "12px";
-      consentBtn.style.cursor = "pointer";
-      consentBtn.textContent = "Sign in using official Google Consent Popup";
-      consentBtn.onclick = () => {
-        window.opener.startGoogleOAuth();
-        window.close();
-      };
-      
-      const manualForm = document.getElementById("manualLogin");
-      manualForm.insertBefore(consentBtn, manualForm.firstChild);
+    window.onload = function() {
+      // 1. Check for Access Token (Google Callback Redirect)
+      const hash = window.location.hash;
+      if (hash.includes("access_token=")) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        if (accessToken) {
+          handleGoogleOAuthCallback(accessToken);
+        }
+        return;
+      }
+
+      // 2. Check if Parent has real Google Client ID configured
+      const googleClientId = window.opener && window.opener.GMK_CONFIG?.googleClientId;
+      if (googleClientId) {
+        // Redirect this popup window directly to the official Google login chooser!
+        const redirectUri = window.location.origin + window.location.pathname;
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=email%20profile`;
+        window.location.href = authUrl;
+        return;
+      }
+
+      // 3. Fallback: Smart Local Chooser matching active browser storage
+      let usersList = [];
+      try {
+        const saved = localStorage.getItem("gbex-logistics-db");
+        if (saved) {
+          const db = JSON.parse(saved);
+          usersList = db.users || [];
+        }
+      } catch (e) {
+        console.warn("Could not read db from localStorage", e);
+      }
+
+      // Filter users by role
+      const matchingUsers = usersList.filter(u => u.role === role);
+
+      if (matchingUsers.length === 0) {
+        // No registered users on this browser, show manual input directly
+        switchToManual();
+      } else {
+        const chooser = document.getElementById("accountChooser");
+        const useAnotherBtn = chooser.querySelector("button:last-child");
+
+        // Clear any old dynamically rendered accounts (just to be safe)
+        const oldItems = chooser.querySelectorAll(".dynamic-account-item");
+        oldItems.forEach(item => item.remove());
+
+        matchingUsers.forEach(user => {
+          const btn = document.createElement("button");
+          btn.className = "account-item dynamic-account-item";
+          
+          const initials = user.name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2) || "U";
+          
+          btn.innerHTML = `
+            <div class="avatar-wrapper">
+              <div class="avatar">${initials}</div>
+            </div>
+            <div class="account-info">
+              <p class="account-name">${user.name}</p>
+              <p class="account-email">${user.email}</p>
+            </div>
+          `;
+          btn.onclick = () => selectAccount(user.email, user.name);
+          chooser.insertBefore(btn, useAnotherBtn);
+        });
+      }
+    };
+
+    async function handleGoogleOAuthCallback(accessToken) {
+      try {
+        const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const payload = await userInfoResponse.json();
+        const email = payload.email;
+        const name = payload.name || payload.given_name || email.split("@")[0];
+        
+        if (window.opener) {
+          window.opener.postMessage({
+            type: "GOOGLE_SIGNIN_SUCCESS",
+            email: email.toLowerCase(),
+            name: name,
+            password: "GoogleLoginOAuthSecret"
+          }, window.location.origin);
+          window.close();
+        }
+      } catch(e) {
+        console.error("Failed to parse Google userinfo callback", e);
+      }
     }
 
     function selectAccount(email, name) {
