@@ -348,7 +348,7 @@ async function requestLoginOtp(role) {
   showNotice("Sending verification OTP to your email...");
   
   try {
-    const url = `${CLOUD_API_URL}?action=requestOTP&email=${encodeURIComponent(email)}`;
+    const url = `${CLOUD_API_URL}?action=requestOTP&email=${encodeURIComponent(email)}&mode=login`;
     const response = await fetch(url);
     const result = await response.json();
     
@@ -395,7 +395,7 @@ async function verifyLoginOtp() {
 async function resendLoginOtp() {
   showNotice("Resending login code...");
   try {
-    const url = `${CLOUD_API_URL}?action=requestOTP&email=${encodeURIComponent(loginData.email)}`;
+    const url = `${CLOUD_API_URL}?action=requestOTP&email=${encodeURIComponent(loginData.email)}&mode=login`;
     const response = await fetch(url);
     const result = await response.json();
     if (result.ok) {

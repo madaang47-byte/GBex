@@ -15,7 +15,7 @@ function doGet(event) {
   const action = event && event.parameter && event.parameter.action;
   
   if (action === "requestOTP") {
-    return handleRequestOTP(event.parameter.email);
+    return handleRequestOTP(event.parameter.email, event.parameter.mode);
   }
   if (action === "verifyOTP") {
     return handleVerifyOTP(event.parameter.email, event.parameter.otp);
@@ -38,7 +38,7 @@ function doPost(event) {
   }
   
   if (body.action === "requestOTP") {
-    return handleRequestOTP(body.email);
+    return handleRequestOTP(body.email, body.mode);
   }
   
   if (body.action === "verifyOTP") {
@@ -48,7 +48,7 @@ function doPost(event) {
   return jsonResponse({ ok: false, error: "Unknown action" });
 }
 
-function handleRequestOTP(email) {
+function handleRequestOTP(email, mode) {
   if (!email) return jsonResponse({ ok: false, error: "Email is required" });
   
   const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -57,8 +57,15 @@ function handleRequestOTP(email) {
   
   // Check if email already exists in sheet database
   const exists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
-  if (exists) {
-    return jsonResponse({ ok: false, error: "An account with this email is already registered." });
+  if (mode === "login") {
+    if (!exists) {
+      return jsonResponse({ ok: false, error: "This email is not registered. Please sign up first." });
+    }
+  } else {
+    // Default mode is signup (unregistered verification)
+    if (exists) {
+      return jsonResponse({ ok: false, error: "An account with this email is already registered." });
+    }
   }
   
   // Generate 6-digit OTP code
