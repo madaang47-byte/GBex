@@ -308,12 +308,20 @@ async function login(role) {
   render();
 }
 
+let signupStep = "input";
+let signupData = { name: "", email: "", password: "" };
+
 async function signup() {
   const name = document.querySelector("#signupName").value.trim();
   const email = document.querySelector("#signupEmail").value.trim().toLowerCase();
   const password = document.querySelector("#signupPassword").value;
   if (!name || !email || !password) {
     showNotice("Name, email, and password are required.");
+    return;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    showNotice("Please enter a valid email address.");
     return;
   }
   if (db.users.some((user) => user.email.toLowerCase() === email)) {
@@ -328,6 +336,77 @@ async function signup() {
       return;
     }
   }
+  
+  // If cloud sync is not active (local offline testing mode), skip OTP
+  if (!cloudEnabled()) {
+    completeAccountSignup(name, email, password);
+    return;
+  }
+  
+  showNotice("Sending verification OTP to your email...");
+  
+  try {
+    const url = `${CLOUD_API_URL}?action=requestOTP&email=${encodeURIComponent(email)}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    
+    if (result.ok) {
+      signupStep = "otp";
+      signupData = { name, email, password };
+      showNotice("OTP code sent successfully. Please check your email!");
+      renderWelcome();
+    } else {
+      showNotice(result.error || "Failed to request OTP code. Please check email details.");
+    }
+  } catch (error) {
+    console.error("OTP request failed:", error);
+    showNotice("Failed to reach verification server. Please check your internet connection.");
+  }
+}
+
+async function verifySignupOtp() {
+  const otpVal = document.querySelector("#verificationOtp").value.trim();
+  if (!otpVal) {
+    showNotice("Please enter the verification code.");
+    return;
+  }
+  showNotice("Verifying OTP...");
+  
+  try {
+    const url = `${CLOUD_API_URL}?action=verifyOTP&email=${encodeURIComponent(signupData.email)}&otp=${encodeURIComponent(otpVal)}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    
+    if (result.ok) {
+      completeAccountSignup(signupData.name, signupData.email, signupData.password);
+      signupStep = "input";
+      showNotice("Email verified successfully! Logging you in...");
+    } else {
+      showNotice(result.error || "Invalid or expired verification code.");
+    }
+  } catch (error) {
+    console.error("OTP verification failed:", error);
+    showNotice("Connection error during verification.");
+  }
+}
+
+async function resendSignupOtp() {
+  showNotice("Resending verification code...");
+  try {
+    const url = `${CLOUD_API_URL}?action=requestOTP&email=${encodeURIComponent(signupData.email)}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    if (result.ok) {
+      showNotice("A new code has been sent to your email.");
+    } else {
+      showNotice(result.error || "Failed to resend code.");
+    }
+  } catch (error) {
+    showNotice("Network error. Please try again.");
+  }
+}
+
+function completeAccountSignup(name, email, password) {
   const user = {
     id: `${authMode}-${Date.now()}`,
     role: authMode,
@@ -847,11 +926,25 @@ function renderWelcome() {
               <button class="btn line social-btn" onclick="socialLogin('Apple ID')"><span class="social-icon apple">A</span>Continue with Apple</button>
             </div>
             <hr style="border:0;border-top:1px solid var(--line);margin:22px 0" />
-            <p class="eyebrow">${authMode === "rider" ? "New rider" : "New owner"}</p>
-            <div class="field"><label>Name</label><input id="signupName" placeholder="${authMode === "rider" ? "Rider name" : "Owner name"}" /></div>
-            <div class="field"><label>Email</label><input id="signupEmail" type="email" placeholder="${authMode === "rider" ? "newrider@email.com" : "newowner@email.com"}" /></div>
-            <div class="field"><label>Password</label><input id="signupPassword" type="password" placeholder="Create password" /></div>
-            <button class="btn secondary full" onclick="signup()">${authMode === "rider" ? "Create rider account" : "Create owner account"}</button>
+            ${signupStep === "otp" ? `
+              <p class="eyebrow" style="color: var(--brand);">Verify Email OTP</p>
+              <p style="font-size: 13.5px; color: var(--muted); margin: 0 0 14px; line-height: 1.5;">We have sent a 6-digit verification code to <strong>${signupData.email}</strong>. Please check your inbox.</p>
+              <div class="field">
+                <label>6-Digit Verification Code</label>
+                <input id="verificationOtp" type="text" placeholder="Enter OTP" maxlength="6" style="letter-spacing: 4px; text-align: center; font-size: 18px; font-weight: 700;" />
+              </div>
+              <button class="btn secondary full" onclick="verifySignupOtp()" style="margin-top: 10px;">Verify &amp; Create Account</button>
+              <div style="display:flex; justify-content:space-between; margin-top:14px;">
+                <button class="link-btn" onclick="resendSignupOtp()" style="font-size:12.5px; color: var(--brand);">Resend OTP</button>
+                <button class="link-btn" onclick="signupStep='input'; renderWelcome()" style="font-size:12.5px; color:var(--muted);">Cancel</button>
+              </div>
+            ` : `
+              <p class="eyebrow">${authMode === "rider" ? "New rider" : "New owner"}</p>
+              <div class="field"><label>Name</label><input id="signupName" placeholder="${authMode === "rider" ? "Rider name" : "Owner name"}" /></div>
+              <div class="field"><label>Email</label><input id="signupEmail" type="email" placeholder="${authMode === "rider" ? "newrider@email.com" : "newowner@email.com"}" /></div>
+              <div class="field"><label>Password</label><input id="signupPassword" type="password" placeholder="Create password" /></div>
+              <button class="btn secondary full" onclick="signup()">${authMode === "rider" ? "Create rider account" : "Create owner account"}</button>
+            `}
             <div id="notice" class="notice"></div>
           </div>
         </div>
@@ -1463,6 +1556,8 @@ function recordsTable(records, editable) {
 
 window.login = login;
 window.signup = signup;
+window.verifySignupOtp = verifySignupOtp;
+window.resendSignupOtp = resendSignupOtp;
 window.socialLogin = socialLogin;
 window.forgotPassword = forgotPassword;
 window.logout = logout;
