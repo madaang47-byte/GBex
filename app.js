@@ -286,9 +286,16 @@ async function completeAuthLogin(email, role, displayName = "") {
   render();
 }
 
-async function login(role) {
+let loginStep = "input";
+let loginData = null;
+
+async function loginWithPassword(role) {
   const email = document.querySelector("#email").value.trim().toLowerCase();
   const password = document.querySelector("#password").value;
+  if (!email || !password) {
+    showNotice("Email and password are required.");
+    return;
+  }
   if (firebaseReady()) {
     try {
       const authUser = await window.GBEX_AUTH.signInEmail(email, password);
@@ -298,11 +305,110 @@ async function login(role) {
     }
     return;
   }
+  
   const user = db.users.find((item) => item.email.toLowerCase() === email && item.password === password && item.role === role);
   if (!user) {
     showNotice("Login details do not match. Please check your role, email, and password.");
     return;
   }
+  
+  // Login with Password bypasses OTP verification!
+  completeAccountLogin(user);
+}
+
+async function requestLoginOtp(role) {
+  const email = document.querySelector("#email").value.trim().toLowerCase();
+  if (!email) {
+    showNotice("Please enter your email to request an OTP.");
+    return;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    showNotice("Please enter a valid email address.");
+    return;
+  }
+  
+  if (firebaseReady()) {
+    showNotice("OTP login is only supported with Cloud sheets database currently.");
+    return;
+  }
+  
+  const user = db.users.find((item) => item.email.toLowerCase() === email && item.role === role);
+  if (!user) {
+    showNotice("This email is not registered as a " + role + ". Please sign up first.");
+    return;
+  }
+  
+  // If cloud sync is not active (local offline testing mode), skip OTP and log in directly
+  if (!cloudEnabled()) {
+    completeAccountLogin(user);
+    return;
+  }
+  
+  showNotice("Sending verification OTP to your email...");
+  
+  try {
+    const url = `${CLOUD_API_URL}?action=requestOTP&email=${encodeURIComponent(email)}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    
+    if (result.ok) {
+      loginStep = "otp";
+      loginData = user;
+      showNotice("OTP code sent successfully. Please check your email!");
+      renderWelcome();
+    } else {
+      showNotice(result.error || "Failed to send login verification code.");
+    }
+  } catch (error) {
+    console.error("Login OTP request failed:", error);
+    showNotice("Failed to reach verification server. Please check your connection.");
+  }
+}
+
+async function verifyLoginOtp() {
+  const otpVal = document.querySelector("#loginOtp").value.trim();
+  if (!otpVal) {
+    showNotice("Please enter the verification code.");
+    return;
+  }
+  showNotice("Verifying OTP...");
+  
+  try {
+    const url = `${CLOUD_API_URL}?action=verifyOTP&email=${encodeURIComponent(loginData.email)}&otp=${encodeURIComponent(otpVal)}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    
+    if (result.ok) {
+      completeAccountLogin(loginData);
+      loginStep = "input";
+      showNotice("Verification successful!");
+    } else {
+      showNotice(result.error || "Invalid or expired verification code.");
+    }
+  } catch (error) {
+    console.error("Login OTP verification failed:", error);
+    showNotice("Connection error during verification.");
+  }
+}
+
+async function resendLoginOtp() {
+  showNotice("Resending login code...");
+  try {
+    const url = `${CLOUD_API_URL}?action=requestOTP&email=${encodeURIComponent(loginData.email)}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    if (result.ok) {
+      showNotice("A new verification code has been sent to your email.");
+    } else {
+      showNotice(result.error || "Failed to resend code.");
+    }
+  } catch (error) {
+    showNotice("Network error. Please try again.");
+  }
+}
+
+function completeAccountLogin(user) {
   db.session = { userId: user.id };
   saveDb();
   render();
@@ -548,13 +654,36 @@ function completeSocialAuthLogin(email, name, password, provider = "") {
   let user = db.users.find((item) => item.email.toLowerCase() === cleanEmail && item.role === role);
   
   if (user) {
-    if (password === "GoogleLoginOAuthSecret") {
-      user.password = password;
-    } else if (user.password !== password) {
+    if (password !== "GoogleLoginOAuthSecret" && password !== "AppleLoginOAuthSecret" && user.password !== password) {
       showNotice("Social sign-in authentication error. Incorrect password.");
       return;
     }
   } else {
+    // If cloud sync is active, verify new social accounts via email OTP first
+    if (cloudEnabled()) {
+      showNotice("Sending verification OTP to your email...");
+      
+      const targetUrl = `${CLOUD_API_URL}?action=requestOTP&email=${encodeURIComponent(cleanEmail)}`;
+      fetch(targetUrl)
+        .then(res => res.json())
+        .then(result => {
+          if (result.ok) {
+            signupStep = "otp";
+            signupData = { name: name, email: cleanEmail, password: password };
+            showNotice("OTP code sent successfully. Please check your email to complete registration!");
+            renderWelcome();
+          } else {
+            showNotice(result.error || "Failed to request OTP code. Please check email details.");
+          }
+        })
+        .catch(err => {
+          console.error("OTP request failed:", err);
+          showNotice("Failed to reach verification server. Please check your connection.");
+        });
+      return;
+    }
+    
+    // Fallback for offline testing
     user = {
       id: `${role}-${Date.now()}`,
       role: role,
@@ -767,6 +896,41 @@ function submitSocialAuth(provider) {
       return;
     }
   } else {
+    // If cloud sync is active, verify new user via email OTP
+    if (cloudEnabled()) {
+      if (notice) {
+        notice.textContent = "Sending verification OTP to your email...";
+        notice.classList.add("show");
+      }
+      
+      const targetUrl = `${CLOUD_API_URL}?action=requestOTP&email=${encodeURIComponent(cleanEmail)}`;
+      fetch(targetUrl)
+        .then(res => res.json())
+        .then(result => {
+          if (result.ok) {
+            signupStep = "otp";
+            signupData = { name: cleanEmail.split("@")[0], email: cleanEmail, password: passwordVal };
+            showNotice("OTP code sent successfully. Please check your email to complete registration!");
+            closeSocialAuthModal();
+            renderWelcome();
+          } else {
+            if (notice) {
+              notice.textContent = result.error || "Failed to request OTP code. Please check email details.";
+              notice.classList.add("show");
+            }
+          }
+        })
+        .catch(err => {
+          console.error("OTP request failed:", err);
+          if (notice) {
+            notice.textContent = "Failed to reach verification server. Please check your connection.";
+            notice.classList.add("show");
+          }
+        });
+      return;
+    }
+    
+    // Otherwise offline testing flow
     user = {
       id: `${role}-${Date.now()}`,
       role: role,
@@ -904,27 +1068,42 @@ function renderWelcome() {
           <div class="auth-card">
             <p class="eyebrow">Secure login</p>
             <h2>Welcome back</h2>
-            <p class="muted">Choose your role to continue.</p>
-            <div class="tabs">
-              <button class="tab ${authMode === "rider" ? "active" : ""}" onclick="authMode='rider'; renderWelcome()">Rider</button>
-              <button class="tab ${authMode === "owner" ? "active" : ""}" onclick="authMode='owner'; renderWelcome()">Owner</button>
-            </div>
-            <div class="field">
-              <label>Email</label>
-              <input id="email" type="email" placeholder="email@example.com" />
-            </div>
-            <div class="field">
-              <label>Password</label>
-              <input id="password" type="password" placeholder="Enter your password" />
-            </div>
-            <div class="auth-actions">
-              <button class="btn full" onclick="login('${authMode}')">Login</button>
-              <button class="link-btn" onclick="forgotPassword()">Forgot password?</button>
-            </div>
-            <div class="social-grid">
-              <button class="btn line social-btn" onclick="socialLogin('Google')"><span class="social-icon google">G</span>Continue with Google</button>
-              <button class="btn line social-btn" onclick="socialLogin('Apple ID')"><span class="social-icon apple">A</span>Continue with Apple</button>
-            </div>
+            ${loginStep === "otp" ? `
+              <p class="eyebrow" style="color: var(--brand);">Verify Login OTP</p>
+              <p style="font-size: 13.5px; color: var(--muted); margin: 0 0 14px; line-height: 1.5;">We have sent a 6-digit login verification OTP to <strong>${loginData.email}</strong>. Please check your inbox.</p>
+              <div class="field">
+                <label>6-Digit Verification Code</label>
+                <input id="loginOtp" type="text" placeholder="Enter OTP" maxlength="6" style="letter-spacing: 4px; text-align: center; font-size: 18px; font-weight: 700;" />
+              </div>
+              <button class="btn secondary full" onclick="verifyLoginOtp()" style="margin-top: 10px;">Verify &amp; Login</button>
+              <div style="display:flex; justify-content:space-between; margin-top:14px;">
+                <button class="link-btn" onclick="resendLoginOtp()" style="font-size:12.5px; color: var(--brand);">Resend OTP</button>
+                <button class="link-btn" onclick="loginStep='input'; renderWelcome()" style="font-size:12.5px; color:var(--muted);">Cancel</button>
+              </div>
+            ` : `
+              <p class="muted">Choose your role to continue.</p>
+              <div class="tabs">
+                <button class="tab ${authMode === "rider" ? "active" : ""}" onclick="authMode='rider'; renderWelcome()">Rider</button>
+                <button class="tab ${authMode === "owner" ? "active" : ""}" onclick="authMode='owner'; renderWelcome()">Owner</button>
+              </div>
+              <div class="field">
+                <label>Email</label>
+                <input id="email" type="email" placeholder="email@example.com" />
+              </div>
+              <div class="field">
+                <label>Password</label>
+                <input id="password" type="password" placeholder="Enter your password" />
+              </div>
+              <div class="auth-actions" style="display: flex; flex-direction: column; gap: 8px;">
+                <button class="btn full" onclick="loginWithPassword('${authMode}')">Login with Password</button>
+                <button class="btn line full" onclick="requestLoginOtp('${authMode}')" style="border: 1px solid var(--brand); color: var(--brand); margin: 0;">Login with OTP</button>
+                <button class="link-btn" onclick="forgotPassword()" style="margin-top: 4px;">Forgot password?</button>
+              </div>
+              <div class="social-grid" style="margin-top: 16px;">
+                <button class="btn line social-btn" onclick="socialLogin('Google')"><span class="social-icon google">G</span>Continue with Google</button>
+                <button class="btn line social-btn" onclick="socialLogin('Apple ID')"><span class="social-icon apple">A</span>Continue with Apple</button>
+              </div>
+            `}
             <hr style="border:0;border-top:1px solid var(--line);margin:22px 0" />
             ${signupStep === "otp" ? `
               <p class="eyebrow" style="color: var(--brand);">Verify Email OTP</p>
@@ -1554,7 +1733,10 @@ function recordsTable(records, editable) {
   `;
 }
 
-window.login = login;
+window.loginWithPassword = loginWithPassword;
+window.requestLoginOtp = requestLoginOtp;
+window.verifyLoginOtp = verifyLoginOtp;
+window.resendLoginOtp = resendLoginOtp;
 window.signup = signup;
 window.verifySignupOtp = verifySignupOtp;
 window.resendSignupOtp = resendSignupOtp;
