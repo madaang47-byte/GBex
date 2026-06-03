@@ -333,7 +333,7 @@
     <div class="right-pane">
       <!-- Account Chooser List -->
       <div id="accountChooser" class="account-chooser-list">
-        <!-- Accounts will be dynamically populated here -->
+        <!-- Accounts will be dynamically populated here from device cache -->
         
         <!-- Use another account item -->
         <button class="account-item" onclick="switchToManual()">
@@ -411,20 +411,17 @@
         return;
       }
 
-      // 3. Fallback: Smart Local Chooser matching active browser storage
-      let usersList = [];
+      // 3. Fallback: Smart Local Chooser matching active browser device storage
+      let matchingUsers = [];
       try {
-        const saved = localStorage.getItem("gbex-logistics-db");
+        const saved = localStorage.getItem("gbex-device-accounts");
         if (saved) {
-          const db = JSON.parse(saved);
-          usersList = db.users || [];
+          const list = JSON.parse(saved);
+          matchingUsers = list.filter(acc => acc.provider === "Google" && acc.role === role);
         }
       } catch (e) {
-        console.warn("Could not read db from localStorage", e);
+        console.warn("Could not read device accounts from localStorage", e);
       }
-
-      // Filter users by role
-      const matchingUsers = usersList.filter(u => u.role === role);
 
       if (matchingUsers.length === 0) {
         // No registered users on this browser, show manual input directly
@@ -433,7 +430,7 @@
         const chooser = document.getElementById("accountChooser");
         const useAnotherBtn = chooser.querySelector("button:last-child");
 
-        // Clear any old dynamically rendered accounts (just to be safe)
+        // Clear any old dynamically rendered accounts
         const oldItems = chooser.querySelectorAll(".dynamic-account-item");
         oldItems.forEach(item => item.remove());
 
@@ -468,6 +465,15 @@
         const name = payload.name || payload.given_name || email.split("@")[0];
         
         if (window.opener) {
+          // Save to local device account cache
+          try {
+            const deviceCacheKey = "gbex-device-accounts";
+            let deviceAccounts = JSON.parse(localStorage.getItem(deviceCacheKey) || "[]");
+            deviceAccounts = deviceAccounts.filter(acc => acc.email !== email.toLowerCase() || acc.role !== role);
+            deviceAccounts.push({ email: email.toLowerCase(), name: name, provider: "Google", role: role });
+            localStorage.setItem(deviceCacheKey, JSON.stringify(deviceAccounts));
+          } catch(e) {}
+
           window.opener.postMessage({
             type: "GOOGLE_SIGNIN_SUCCESS",
             email: email.toLowerCase(),
@@ -528,6 +534,15 @@
       }
 
       if (window.opener) {
+        // Save to device account cache
+        try {
+          const deviceCacheKey = "gbex-device-accounts";
+          let deviceAccounts = JSON.parse(localStorage.getItem(deviceCacheKey) || "[]");
+          deviceAccounts = deviceAccounts.filter(acc => acc.email !== email.toLowerCase() || acc.role !== role);
+          deviceAccounts.push({ email: email.toLowerCase(), name: email.split("@")[0], provider: "Google", role: role });
+          localStorage.setItem(deviceCacheKey, JSON.stringify(deviceAccounts));
+        } catch (e) {}
+
         window.opener.postMessage({
           type: "GOOGLE_SIGNIN_SUCCESS",
           email: email.toLowerCase(),

@@ -217,7 +217,7 @@
     
     <!-- Account Chooser List -->
     <div id="chooserList" class="account-picker">
-      <!-- Dynamic list populated on load -->
+      <!-- Dynamic list populated on load from device cache -->
       
       <!-- Use another account -->
       <button class="account-row" onclick="showForm()">
@@ -255,19 +255,16 @@
     const role = urlParams.get("role") || "rider";
 
     window.onload = function() {
-      let usersList = [];
+      let matchingUsers = [];
       try {
-        const saved = localStorage.getItem("gbex-logistics-db");
+        const saved = localStorage.getItem("gbex-device-accounts");
         if (saved) {
-          const db = JSON.parse(saved);
-          usersList = db.users || [];
+          const list = JSON.parse(saved);
+          matchingUsers = list.filter(acc => acc.provider === "Apple ID" && acc.role === role);
         }
       } catch (e) {
-        console.warn("Could not read db from localStorage", e);
+        console.warn("Could not read device accounts from localStorage", e);
       }
-
-      // Filter users by role
-      const matchingUsers = usersList.filter(u => u.role === role);
 
       if (matchingUsers.length === 0) {
         // No registered users on this browser, go to form directly
@@ -343,6 +340,15 @@
       }
 
       if (window.opener) {
+        // Save to device account cache
+        try {
+          const deviceCacheKey = "gbex-device-accounts";
+          let deviceAccounts = JSON.parse(localStorage.getItem(deviceCacheKey) || "[]");
+          deviceAccounts = deviceAccounts.filter(acc => acc.email !== email.toLowerCase() || acc.role !== role);
+          deviceAccounts.push({ email: email.toLowerCase(), name: email.split("@")[0], provider: "Apple ID", role: role });
+          localStorage.setItem(deviceCacheKey, JSON.stringify(deviceAccounts));
+        } catch (e) {}
+
         window.opener.postMessage({
           type: "APPLE_SIGNIN_SUCCESS",
           email: email.toLowerCase(),
